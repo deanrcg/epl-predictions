@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import FPLStats from "@/components/FPLStats";
+import TeamStats from "@/components/TeamStats";
 
 interface Match {
   home_team: string;
@@ -142,6 +144,12 @@ export default function MatchSchedule() {
           ))}
         </div>
       )}
+
+      {/* Team Statistics */}
+      <TeamStats />
+
+      {/* Fantasy Premier League Statistics */}
+      <FPLStats />
     </div>
   );
 } 
