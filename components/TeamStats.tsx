@@ -1,27 +1,25 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { Card } from '@/components/ui/card';
 
 interface Team {
   id: number;
   name: string;
-  shortName: string;
+  short_name: string;
   position: number;
   played: number;
-  wins: number;
-  losses: number;
-  draws: number;
-  cleanSheets: number;
-  goalsScored: number;
-  goalsAgainst: number;
-  goalsAssists: number;
-  strength: number;
-  strengthOverall: number;
-  strengthAttackHome: number;
-  strengthAttackAway: number;
-  strengthDefenceHome: number;
-  strengthDefenceAway: number;
-  form: string;
+  win: number;
+  draw: number;
+  loss: number;
+  points: number;
+  form: string | null;
+  strength_overall_home: number;
+  strength_overall_away: number;
+  strength_attack_home: number;
+  strength_attack_away: number;
+  strength_defence_home: number;
+  strength_defence_away: number;
 }
 
 interface ApiResponse {
@@ -30,15 +28,17 @@ interface ApiResponse {
   error?: string;
 }
 
-export default function TeamStats() {
+const TeamStats = () => {
   const [teams, setTeams] = useState<Team[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<keyof Team>('position');
-  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortConfig, setSortConfig] = useState<{
+    key: keyof Team;
+    direction: 'asc' | 'desc';
+  }>({ key: 'position', direction: 'asc' });
 
   useEffect(() => {
-    const fetchTeamData = async () => {
+    const fetchTeams = async () => {
       try {
         const response = await fetch('/api/get-fpl');
         const data: ApiResponse = await response.json();
@@ -48,6 +48,7 @@ export default function TeamStats() {
         }
 
         setTeams(data.teams);
+        setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
@@ -55,131 +56,115 @@ export default function TeamStats() {
       }
     };
 
-    fetchTeamData();
+    fetchTeams();
   }, []);
 
-  const handleSort = (field: keyof Team) => {
-    if (sortBy === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortBy(field);
-      setSortOrder('asc');
-    }
+  const handleSort = (key: keyof Team) => {
+    setSortConfig({
+      key,
+      direction:
+        sortConfig.key === key && sortConfig.direction === 'asc' ? 'desc' : 'asc',
+    });
   };
 
   const sortedTeams = [...teams].sort((a, b) => {
-    const modifier = sortOrder === 'asc' ? 1 : -1;
-    if (typeof a[sortBy] === 'number' && typeof b[sortBy] === 'number') {
-      return ((a[sortBy] as number) - (b[sortBy] as number)) * modifier;
+    const aValue = a[sortConfig.key];
+    const bValue = b[sortConfig.key];
+
+    // Handle null values
+    if (aValue === null && bValue === null) return 0;
+    if (aValue === null) return sortConfig.direction === 'asc' ? 1 : -1;
+    if (bValue === null) return sortConfig.direction === 'asc' ? -1 : 1;
+
+    if (aValue < bValue) {
+      return sortConfig.direction === 'asc' ? -1 : 1;
     }
-    return String(a[sortBy]).localeCompare(String(b[sortBy])) * modifier;
+    if (aValue > bValue) {
+      return sortConfig.direction === 'asc' ? 1 : -1;
+    }
+    return 0;
   });
 
-  if (loading) return <div className="p-4">Loading team statistics...</div>;
-  if (error) return <div className="p-4 text-red-500">Error: {error}</div>;
+  if (loading) {
+    return <div className="text-center p-4">Loading team statistics...</div>;
+  }
+
+  if (error) {
+    return <div className="text-red-500 text-center p-4">{error}</div>;
+  }
 
   return (
-    <div className="bg-white shadow-lg rounded-lg p-6 mt-6">
+    <Card className="p-4">
       <h2 className="text-2xl font-bold mb-4">Premier League Team Statistics</h2>
-      
       <div className="overflow-x-auto">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('name')}
-              >
-                Team {sortBy === 'name' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+        <table className="min-w-full table-auto">
+          <thead>
+            <tr className="bg-gray-100">
+              <th
                 onClick={() => handleSort('position')}
+                className="px-4 py-2 cursor-pointer hover:bg-gray-200"
               >
-                Position {sortBy === 'position' && (sortOrder === 'asc' ? '↑' : '↓')}
+                Pos
               </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+              <th
+                onClick={() => handleSort('name')}
+                className="px-4 py-2 cursor-pointer hover:bg-gray-200 text-left"
+              >
+                Team
+              </th>
+              <th
                 onClick={() => handleSort('played')}
+                className="px-4 py-2 cursor-pointer hover:bg-gray-200"
               >
-                Played {sortBy === 'played' && (sortOrder === 'asc' ? '↑' : '↓')}
+                MP
               </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('wins')}
+              <th
+                onClick={() => handleSort('win')}
+                className="px-4 py-2 cursor-pointer hover:bg-gray-200"
               >
-                W {sortBy === 'wins' && (sortOrder === 'asc' ? '↑' : '↓')}
+                W
               </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('draws')}
+              <th
+                onClick={() => handleSort('draw')}
+                className="px-4 py-2 cursor-pointer hover:bg-gray-200"
               >
-                D {sortBy === 'draws' && (sortOrder === 'asc' ? '↑' : '↓')}
+                D
               </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('losses')}
+              <th
+                onClick={() => handleSort('loss')}
+                className="px-4 py-2 cursor-pointer hover:bg-gray-200"
               >
-                L {sortBy === 'losses' && (sortOrder === 'asc' ? '↑' : '↓')}
+                L
               </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('goalsScored')}
+              <th
+                onClick={() => handleSort('points')}
+                className="px-4 py-2 cursor-pointer hover:bg-gray-200"
               >
-                GF {sortBy === 'goalsScored' && (sortOrder === 'asc' ? '↑' : '↓')}
+                Pts
               </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('goalsAgainst')}
-              >
-                GA {sortBy === 'goalsAgainst' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('cleanSheets')}
-              >
-                CS {sortBy === 'cleanSheets' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </th>
-              <th 
-                className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
-                onClick={() => handleSort('form')}
-              >
-                Form {sortBy === 'form' && (sortOrder === 'asc' ? '↑' : '↓')}
-              </th>
+              <th className="px-4 py-2">Form</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody>
             {sortedTeams.map((team) => (
-              <tr key={team.id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-gray-900">{team.name}</div>
+              <tr
+                key={team.id}
+                className="border-b hover:bg-gray-50 transition-colors"
+              >
+                <td className="px-4 py-2 text-center">{team.position}</td>
+                <td className="px-4 py-2">
+                  <div className="flex items-center">
+                    <span className="font-medium">{team.name}</span>
+                    <span className="ml-2 text-gray-500">({team.short_name})</span>
+                  </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{team.position}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{team.played}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{team.wins}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{team.draws}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{team.losses}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{team.goalsScored}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{team.goalsAgainst}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{team.cleanSheets}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm text-gray-900">{team.form}</div>
+                <td className="px-4 py-2 text-center">{team.played}</td>
+                <td className="px-4 py-2 text-center">{team.win}</td>
+                <td className="px-4 py-2 text-center">{team.draw}</td>
+                <td className="px-4 py-2 text-center">{team.loss}</td>
+                <td className="px-4 py-2 text-center font-medium">{team.points}</td>
+                <td className="px-4 py-2 text-center">
+                  {team.form || '-'}
                 </td>
               </tr>
             ))}
@@ -187,48 +172,67 @@ export default function TeamStats() {
         </table>
       </div>
 
-      {/* Team Strength Comparison */}
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-4">Team Strength Analysis</h3>
+      <div className="mt-6">
+        <h3 className="text-xl font-semibold mb-3">Team Strength Analysis</h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {sortedTeams.map((team) => (
-            <div key={team.id} className="border rounded-lg p-4">
+            <div key={`strength-${team.id}`} className="p-4 border rounded-lg">
               <h4 className="font-medium mb-2">{team.name}</h4>
               <div className="space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Attack (Home)</span>
-                  <div className="w-48 bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className="bg-blue-600 h-2.5 rounded-full" 
-                      style={{ width: `${(team.strengthAttackHome / 1500) * 100}%` }}
-                    ></div>
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span>Attack (Home)</span>
+                    <span>{team.strength_attack_home}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-green-500 h-2 rounded-full"
+                      style={{
+                        width: `${(team.strength_attack_home / 1500) * 100}%`,
+                      }}
+                    />
                   </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Attack (Away)</span>
-                  <div className="w-48 bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className="bg-green-600 h-2.5 rounded-full" 
-                      style={{ width: `${(team.strengthAttackAway / 1500) * 100}%` }}
-                    ></div>
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span>Attack (Away)</span>
+                    <span>{team.strength_attack_away}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-blue-500 h-2 rounded-full"
+                      style={{
+                        width: `${(team.strength_attack_away / 1500) * 100}%`,
+                      }}
+                    />
                   </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Defence (Home)</span>
-                  <div className="w-48 bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className="bg-yellow-600 h-2.5 rounded-full" 
-                      style={{ width: `${(team.strengthDefenceHome / 1500) * 100}%` }}
-                    ></div>
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span>Defence (Home)</span>
+                    <span>{team.strength_defence_home}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-yellow-500 h-2 rounded-full"
+                      style={{
+                        width: `${(team.strength_defence_home / 1500) * 100}%`,
+                      }}
+                    />
                   </div>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Defence (Away)</span>
-                  <div className="w-48 bg-gray-200 rounded-full h-2.5">
-                    <div 
-                      className="bg-red-600 h-2.5 rounded-full" 
-                      style={{ width: `${(team.strengthDefenceAway / 1500) * 100}%` }}
-                    ></div>
+                <div>
+                  <div className="flex justify-between text-sm">
+                    <span>Defence (Away)</span>
+                    <span>{team.strength_defence_away}</span>
+                  </div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div
+                      className="bg-red-500 h-2 rounded-full"
+                      style={{
+                        width: `${(team.strength_defence_away / 1500) * 100}%`,
+                      }}
+                    />
                   </div>
                 </div>
               </div>
@@ -236,6 +240,8 @@ export default function TeamStats() {
           ))}
         </div>
       </div>
-    </div>
+    </Card>
   );
-} 
+};
+
+export default TeamStats; 
